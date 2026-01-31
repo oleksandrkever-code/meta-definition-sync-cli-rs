@@ -1,0 +1,7 @@
+[toolchain]
+# Required by our dependency graph (reqwest/url/idna/icu) for real Shopify HTTP calls.
+# Pinning the toolchain keeps builds reproducible and "production-ready".
+channel = "1.83.0"
+profile = "minimal"
+components = ["rustfmt", "clippy"]
+

@@ -1,0 +1,9 @@
+[workspace]
+resolver = "2"
+members = [
+  "crates/mds_domain",
+  "crates/mds_app",
+  "crates/mds_infra",
+  "crates/mds_cli",
+]
+
