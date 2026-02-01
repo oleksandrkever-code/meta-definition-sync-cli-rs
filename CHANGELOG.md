@@ -10,6 +10,16 @@ This project follows **Keep a Changelog** and **Semantic Versioning**.
 
 ### Fixed
 
+## [0.1.1] - 2026-02-01
+
+### Added
+- Rustdoc publishing to GitHub Pages (CI workflow) and documentation links in README.
+
+### Fixed
+- Metaobjects: make cross-environment metaobject reference validations portable by converting
+  `metaobject_definition_ids` ⇄ `metaobject_definition_types` during export/import and failing fast
+  when configs contain store-specific definition IDs.
+
 ## [0.1.0] - 2026-02-01
 
 ### Added
