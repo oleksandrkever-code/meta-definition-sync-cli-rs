@@ -42,13 +42,6 @@ if ! git diff --quiet || ! git diff --cached --quiet; then
   exit 2
 fi
 
-# Also refuse untracked files (release commit should be deterministic).
-if git status --porcelain=v1 | grep -q '^\?\?'; then
-  echo "Untracked files present. Please clean them up before release." >&2
-  git status --porcelain=v1 >&2 || true
-  exit 2
-fi
-
 # Update version in-place (safe quoting; fail if nothing changed).
 VERSION="$version" perl -i -pe 'BEGIN{$v=$ENV{VERSION}; $n=0} $n += s/^version\s*=\s*"[0-9]+\.[0-9]+\.[0-9]+"/version = "$v"/; END{exit 2 if $n==0}' "$file"
 
