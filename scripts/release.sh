@@ -32,7 +32,9 @@ if git rev-parse -q --verify "refs/tags/${tag}" >/dev/null; then
   exit 2
 fi
 
-perl -0777 -i -pe "s/(\\nversion\\s*=\\s*\")([0-9]+\\.[0-9]+\\.[0-9]+)(\"\\s*\\n)/\$1${version}\$3/s" "$file"
+# Update version in-place (safe quoting; fail if nothing changed).
+VERSION="$version" perl -i -pe 'BEGIN{$v=$ENV{VERSION}; $n=0} $n += s/^version\s*=\s*"[0-9]+\.[0-9]+\.[0-9]+"/version = "$v"/; END{exit 2 if $n==0}' "$file"
+
 
 git add "$file"
 git commit -m "release: ${tag}"
