@@ -13,9 +13,18 @@ use mds_app::logging::{ContextLogger, LogField, LogLevel, Logger};
 use mds_domain::{parse_owner_types, OwnerType};
 use mds_infra::{env_service::DotenvEnvironmentService, ShopifyMetafieldGateway, FsFileRepo};
 use mds_infra::logger::TracingLogger;
+use serde::{Deserialize, Serialize};
+use std::io::IsTerminal;
+use std::time::Duration;
 
 fn main() {
     let cli = Cli::parse();
+
+    // Commands that should work without any Shopify env/config:
+    if let Command::Version { check } = cli.command {
+        print_version(check);
+        return;
+    }
 
     // Load config from `.env` / `.env.<name>` WITHOUT mutating global env.
     // This makes future `diff` between two stores possible.
@@ -42,6 +51,8 @@ fn main() {
         }
     };
 
+    maybe_check_for_updates_on_startup(&cli, &config);
+
     init_logging(config.log_format);
 
     let base_logger = TracingLogger::default();
@@ -49,6 +60,7 @@ fn main() {
     let env_logger = ContextLogger::new(&base_logger, &env_ctx);
 
     match cli.command {
+        Command::Version { .. } => unreachable!("handled before env loading"),
         Command::Metafield { command } => match command {
             MetafieldCommand::Export { owner_type } => {
                 let run_ctx = [LogField::new("command", "metafield")];
@@ -356,6 +368,166 @@ fn main() {
                 }
             }
         },
+    }
+}
+
+fn maybe_check_for_updates_on_startup(cli: &Cli, config: &mds_app::config::StoreConfig) {
+    // Don't spam CI/logs.
+    if cli.ci {
+        return;
+    }
+
+    if config.disable_update_check {
+        return;
+    }
+
+    // Only show update hints in interactive terminals.
+    if !std::io::stderr().is_terminal() {
+        return;
+    }
+
+    // Avoid double output for `version` (it has an explicit check mode).
+    if matches!(cli.command, Command::Version { .. }) {
+        return;
+    }
+
+    let now = unix_now_secs();
+    let interval_days = config.update_check_days;
+    let interval_secs = interval_days.saturating_mul(24 * 60 * 60);
+
+    let cache_path = update_check_cache_path();
+    if let Some(cache) = read_update_cache(&cache_path) {
+        if now.saturating_sub(cache.last_checked_unix) < interval_secs {
+            return;
+        }
+    }
+
+    // Best-effort: update cache even if request fails (avoid retry loops).
+    write_update_cache(&cache_path, &UpdateCheckCache { last_checked_unix: now });
+
+    // Silent unless update exists.
+    if let Some(msg) = check_update_message(Duration::from_secs(2)) {
+        eprintln!("{msg}");
+    }
+}
+
+fn print_version(check: bool) {
+    let current = format!("v{}", env!("CARGO_PKG_VERSION"));
+    println!("{current}");
+
+    if !check {
+        return;
+    }
+
+    match check_update_message(Duration::from_secs(4)) {
+        Some(msg) => eprintln!("{msg}"),
+        None => eprintln!("You are up to date ({current})."),
+    };
+}
+
+fn check_update_message(timeout: Duration) -> Option<String> {
+    let current = format!("v{}", env!("CARGO_PKG_VERSION"));
+    let repo = "oleksandrkever-code/meta-definition-sync-cli-rs";
+    let api_url = format!("https://api.github.com/repos/{repo}/releases/latest");
+    let readme_install_url =
+        "https://github.com/oleksandrkever-code/meta-definition-sync-cli-rs#install-no-rust-required";
+
+    #[derive(Debug, Deserialize)]
+    struct GithubRelease {
+        tag_name: String,
+        html_url: Option<String>,
+    }
+
+    let client = reqwest::blocking::Client::builder()
+        .timeout(timeout)
+        .build()
+        .ok()?;
+
+    let resp = client
+        .get(api_url)
+        .header("User-Agent", format!("mdsr-cli/{}", env!("CARGO_PKG_VERSION")))
+        .send()
+        .ok()?;
+
+    if !resp.status().is_success() {
+        return None;
+    }
+
+    let latest: GithubRelease = resp.json().ok()?;
+    let latest_tag = latest.tag_name.trim().to_string();
+    if latest_tag.is_empty() {
+        return None;
+    }
+
+    match compare_semver_tags(&current, &latest_tag) {
+        Some(std::cmp::Ordering::Less) => {
+            let release_url = latest
+                .html_url
+                .as_deref()
+                .unwrap_or("https://github.com/oleksandrkever-code/meta-definition-sync-cli-rs/releases/latest");
+            Some(format!(
+                "Update available: {current} -> {latest_tag}. See: {readme_install_url} (release: {release_url})"
+            ))
+        }
+        _ => None,
+    }
+}
+
+fn parse_v_semver(tag: &str) -> Option<(u64, u64, u64)> {
+    let t = tag.trim();
+    let t = t.strip_prefix('v').unwrap_or(t);
+    let mut it = t.split('.');
+    let major = it.next()?.parse().ok()?;
+    let minor = it.next()?.parse().ok()?;
+    let patch = it.next()?.parse().ok()?;
+    Some((major, minor, patch))
+}
+
+fn compare_semver_tags(a: &str, b: &str) -> Option<std::cmp::Ordering> {
+    let aa = parse_v_semver(a)?;
+    let bb = parse_v_semver(b)?;
+    Some(aa.cmp(&bb))
+}
+
+fn unix_now_secs() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0)
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct UpdateCheckCache {
+    last_checked_unix: u64,
+}
+
+fn update_check_cache_path() -> std::path::PathBuf {
+    // Linux: $XDG_CACHE_HOME or ~/.cache
+    // macOS: ~/Library/Caches
+    let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
+
+    #[cfg(target_os = "macos")]
+    let base = std::path::PathBuf::from(home).join("Library").join("Caches");
+
+    #[cfg(not(target_os = "macos"))]
+    let base = std::env::var("XDG_CACHE_HOME")
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(|_| std::path::PathBuf::from(home).join(".cache"));
+
+    base.join("mdsr-cli").join("update-check.json")
+}
+
+fn read_update_cache(path: &std::path::Path) -> Option<UpdateCheckCache> {
+    let bytes = std::fs::read(path).ok()?;
+    serde_json::from_slice(&bytes).ok()
+}
+
+fn write_update_cache(path: &std::path::Path, cache: &UpdateCheckCache) {
+    if let Some(parent) = path.parent() {
+        let _ = std::fs::create_dir_all(parent);
+    }
+    if let Ok(bytes) = serde_json::to_vec(cache) {
+        let _ = std::fs::write(path, bytes);
     }
 }
 

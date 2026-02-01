@@ -60,7 +60,7 @@ where
                     LogLevel::Info,
                     "Hint: run command to generate missing definitions file",
                     &[
-                        LogField::new("suggested_command", "mds-cli metaobject export"),
+                        LogField::new("suggested_command", "mdsr-cli metaobject export"),
                         LogField::new("output", "definitions/metaobjects.json"),
                     ],
                 );

@@ -270,7 +270,7 @@ where
                         LogField::new(
                             "suggested_command",
                             format!(
-                                "mds-cli metafield export --owner-type {}",
+                                "mdsr-cli metafield export --owner-type {}",
                                 owner_type.as_str()
                             ),
                         ),

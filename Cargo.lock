@@ -670,6 +670,9 @@ dependencies = [
  "mds_app",
  "mds_domain",
  "mds_infra",
+ "reqwest",
+ "serde",
+ "serde_json",
  "tracing-subscriber",
 ]
 

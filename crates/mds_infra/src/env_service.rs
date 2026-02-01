@@ -75,6 +75,17 @@ impl DotenvEnvironmentService {
             .filter(|s| !s.trim().is_empty())
             .ok_or_else(|| AppError::Config(format!("missing required env var: {key}")))
     }
+
+    fn parse_bool(map: &HashMap<String, String>, key: &str) -> bool {
+        match map.get(key).map(|s| s.trim().to_ascii_lowercase()) {
+            Some(v) if matches!(v.as_str(), "1" | "true" | "yes" | "on") => true,
+            _ => false,
+        }
+    }
+
+    fn parse_u64(map: &HashMap<String, String>, key: &str) -> Option<u64> {
+        map.get(key).and_then(|s| s.trim().parse::<u64>().ok())
+    }
 }
 
 impl EnvironmentService for DotenvEnvironmentService {
@@ -96,7 +107,14 @@ impl EnvironmentService for DotenvEnvironmentService {
     }
 
     fn load_store_config(&self, env: &Environment) -> Result<StoreConfig, AppError> {
-        let map = self.parse_env_file(&env.file_path)?;
+        // Start with real process env (allows `export FOO=...`), then let `.env` override it.
+        // Still: do not mutate global env.
+        let mut map: HashMap<String, String> = std::env::vars().collect();
+        let file_map = self.parse_env_file(&env.file_path)?;
+        for (k, v) in file_map {
+            map.insert(k, v);
+        }
+
         let shop_domain = Self::required(&map, "MDS_CLI_SHOPIFY_SHOP_DOMAIN")?;
         let access_token = Self::required(&map, "MDS_CLI_SHOPIFY_ACCESS_TOKEN")?;
         let log_format = map
@@ -109,6 +127,8 @@ impl EnvironmentService for DotenvEnvironmentService {
             shop_domain,
             access_token,
             log_format,
+            disable_update_check: Self::parse_bool(&map, "MDSR_CLI_NO_UPDATE_CHECK"),
+            update_check_days: Self::parse_u64(&map, "MDSR_CLI_UPDATE_CHECK_DAYS").unwrap_or(7),
         })
     }
 }

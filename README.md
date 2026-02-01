@@ -1,6 +1,6 @@
 # 🦀 Meta Definition Sync CLI, built with Rust
 
-```
+```text
 🦀  safety • performance • correctness
 ```
 
@@ -13,6 +13,7 @@ A CLI for importing/exporting **Shopify metafield and metaobject definitions** v
 ## ✨ Features
 
 ### 🔧 Metafield definitions
+
 - ✅ **Export** to JSON per owner type (filters namespaces starting with `shopify`)
 - ✅ **Import** from JSON (create / update / recreate / no-change)
 - ✅ **Batching + rate-limit UX**: batches of 10 + 1000ms delay with progress logs
@@ -23,6 +24,7 @@ A CLI for importing/exporting **Shopify metafield and metaobject definitions** v
 - ✅ **Reports** written to `reports/…` after imports
 
 ### 🏗️ Metaobject definitions
+
 - ✅ **Export** to `definitions/metaobjects.json` (filters system types starting with `shopify--`)
 - ✅ **Import** from `definitions/metaobjects.json`
   - prints a **dependency tree** (like a project folder tree) before mutating Shopify
@@ -80,11 +82,59 @@ Optional variables:
 
 ## 🚀 Quickstart
 
-From the repo root:
+### Install (no Rust required)
+
+Prebuilt binaries are attached to each GitHub Release for:
+
+- **macOS (Apple Silicon / arm64)**
+- **Linux (x86_64)**
+
+You can install **without `sudo`** into `~/.local/bin` (recommended).
+
+To see your current version (and check for updates):
 
 ```bash
-cd rust-rewrite
+mdsr-cli --version
+mdsr-cli version --check
+```
 
+By default, `mdsr-cli` also performs a **best-effort update check** at most **once every 7 days** (only in interactive terminals; skipped in `--ci`).
+To disable it:
+
+```bash
+export MDSR_CLI_NO_UPDATE_CHECK=1
+```
+
+#### macOS (Apple Silicon / arm64)
+
+```bash
+mkdir -p ~/.local/bin
+curl -fsSL "https://github.com/oleksandrkever-code/meta-definition-sync-cli-rs/releases/latest/download/mdsr-cli-macos-arm64.tar.gz" \
+  | tar -xz -C ~/.local/bin
+
+# ensure ~/.local/bin is in PATH (zsh)
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc
+source ~/.zshrc
+
+mdsr-cli --help
+```
+
+#### Linux (x86_64)
+
+```bash
+mkdir -p ~/.local/bin
+curl -fsSL "https://github.com/oleksandrkever-code/meta-definition-sync-cli-rs/releases/latest/download/mdsr-cli-linux-x86_64.tar.gz" \
+  | tar -xz -C ~/.local/bin
+
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
+source ~/.bashrc
+
+mdsr-cli --help
+```
+
+### From source (requires Rust)
+
+```bash
 # Export metafields for one owner type
 cargo run -p mds_cli -- metafield export --owner-type PRODUCT
 
@@ -108,6 +158,7 @@ cargo run -p mds_cli -- metaobject import
 All paths are resolved relative to the **current working directory**.
 
 ### 📥 Inputs
+
 - **Metafields (per owner type)**:
   - `definitions/metafields/<ownerTypeLowercase>.json`
   - example: `definitions/metafields/product.json`
@@ -117,12 +168,14 @@ All paths are resolved relative to the **current working directory**.
 If an input file is missing during import, the CLI fails and prints a hint command to generate it via export.
 
 ### 📤 Export outputs
+
 - **Metafields export**:
   - `definitions/metafields/<ownerTypeLowercase>.json`
 - **Metaobjects export**:
   - `definitions/metaobjects.json`
 
 ### 🧪 Import reports
+
 After imports, detailed JSON reports are saved:
 
 - **Metafields import**:
@@ -135,22 +188,27 @@ After imports, detailed JSON reports are saved:
 ## 🖥️ CLI surface (commands & flags)
 
 ### Global flags
+
 - `--ci`: disables interactive prompts
 - `--environment <name>`: selects `.env.<name>`
   - in `--ci` mode, if multiple env files exist, `--environment` is required
 
 ### `metafield export`
+
 - `--owner-type <TYPE|TYPE1,TYPE2|ALL>`
 
 ### `metafield import`
+
 - `--owner-type <...>` *(required in CI; in non-CI can be selected interactively)*
 - `--allow-type-changes`
 - `--allow-associated-metafields-deletion`
 
 ### `metaobject export`
+
 - no additional flags
 
 ### `metaobject import`
+
 - currently imports from `definitions/metaobjects.json`
 - prints a dependency tree before applying mutations
 
@@ -167,7 +225,7 @@ This Rust workspace is structured using **Clean Architecture** so that:
 ### 📦 Workspace layout
 
 ```text
-rust-rewrite/
+.
 ├─ Cargo.toml
 ├─ crates/
 │  ├─ mds_domain/   # domain entities + value objects (pure)
@@ -226,15 +284,15 @@ sequenceDiagram
 
 ## ✅ TODO (Rust rewrite)
 
-The Rust rewrite lives in `rust-rewrite/`. The roadmap is intentionally kept inside this README (the `docs/` folder may be removed later).
+The Rust rewrite lives in this repository root. The roadmap is intentionally kept inside this README (the `docs/` folder may be removed later).
 
 - **Diff commands**
-  - `mds-cli metafield diff --owner-type ...`
-  - `mds-cli metaobject diff`
+  - `mdsr-cli metafield diff --owner-type ...`
+  - `mdsr-cli metaobject diff`
 - **Deletions / pruning (explicit & guarded)**
-  - `mds-cli metaobject import --allow-deletion` (Node parity)
-  - `mds-cli metaobject prune` / `mds-cli metaobject fields-prune`
-  - `mds-cli metafield prune --owner-type ...`
+  - `mdsr-cli metaobject import --allow-deletion` (Node parity)
+  - `mdsr-cli metaobject prune` / `mdsr-cli metaobject fields-prune`
+  - `mdsr-cli metafield prune --owner-type ...`
 - **E2E smoke tests (CI-gated)**
   - dedicated Shopify dev/test store
   - minimal export/import smoke suite (non-destructive by default)
@@ -255,7 +313,7 @@ The Rust rewrite lives in `rust-rewrite/`. The roadmap is intentionally kept ins
   - keep default non-destructive behavior
 
 - **A1b — Metafield prune command (explicit deletions)**
-  - add `mds-cli metafield prune --owner-type ...` with a guard flag (e.g. `--yes` / `--allow-deletion`)
+  - add `mdsr-cli metafield prune --owner-type ...` with a guard flag (e.g. `--yes` / `--allow-deletion`)
   - compute “extra definitions” and delete in batches with delays
 
 - **A2 — Metaobject field deletions (explicit opt-in)**
@@ -293,7 +351,5 @@ The Rust rewrite lives in `rust-rewrite/`. The roadmap is intentionally kept ins
 Run tests:
 
 ```bash
-cd rust-rewrite
 cargo test --workspace
 ```
-

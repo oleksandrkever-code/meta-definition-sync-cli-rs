@@ -33,6 +33,10 @@ pub struct StoreConfig {
     pub shop_domain: String,
     pub access_token: String,
     pub log_format: LogFormat,
+    /// Disable the best-effort update check.
+    pub disable_update_check: bool,
+    /// How often to check for updates on startup (in days).
+    pub update_check_days: u64,
 }
 
 /// Port: environment discovery + loading.

@@ -2,7 +2,7 @@ use clap::{Parser, Subcommand};
 
 /// Root CLI entrypoint.
 #[derive(Debug, Parser)]
-#[command(name = "mds-cli")]
+#[command(name = "mdsr-cli")]
 #[command(about = "Meta Definition Sync CLI (Rust rewrite)", long_about = None)]
 pub struct Cli {
     /// Run in CI mode (no interactive prompts)
@@ -21,6 +21,12 @@ pub struct Cli {
 
 #[derive(Debug, Subcommand)]
 pub enum Command {
+    /// Print version info (and optionally check for updates).
+    Version {
+        /// Check GitHub Releases for a newer version.
+        #[arg(long, default_value_t = false)]
+        check: bool,
+    },
     Metafield {
         #[command(subcommand)]
         command: MetafieldCommand,
@@ -74,11 +80,11 @@ mod tests {
     fn parses_metafield_export_owner_type() {
         // Human explanation:
         // This test guarantees that the CLI accepts the command shape we want:
-        //   mds-cli metafield export --owner-type PRODUCT
+        //   mdsr-cli metafield export --owner-type PRODUCT
         // If we change flags/subcommands later, this test will fail and force us
         // to consciously update CLI behavior.
         let cli = Cli::try_parse_from([
-            "mds-cli",
+            "mdsr-cli",
             "metafield",
             "export",
             "--owner-type",
@@ -94,6 +100,7 @@ mod tests {
                 MetafieldCommand::Import { .. } => panic!("expected metafield export"),
             },
             Command::Metaobject { .. } => panic!("expected metafield command"),
+            Command::Version { .. } => panic!("expected metafield command"),
         }
     }
 
@@ -101,10 +108,10 @@ mod tests {
     fn parses_metafield_export_owner_type_defaults_to_all() {
         // Human explanation:
         // For convenience (and parity with typical CLI UX), we want:
-        //   mds-cli metafield export
+        //   mdsr-cli metafield export
         // to behave like:
-        //   mds-cli metafield export --owner-type ALL
-        let cli = Cli::try_parse_from(["mds-cli", "metafield", "export"]).unwrap();
+        //   mdsr-cli metafield export --owner-type ALL
+        let cli = Cli::try_parse_from(["mdsr-cli", "metafield", "export"]).unwrap();
 
         match cli.command {
             Command::Metafield { command } => match command {
@@ -114,6 +121,7 @@ mod tests {
                 MetafieldCommand::Import { .. } => panic!("expected metafield export"),
             },
             Command::Metaobject { .. } => panic!("expected metafield command"),
+            Command::Version { .. } => panic!("expected metafield command"),
         }
     }
 
@@ -122,7 +130,7 @@ mod tests {
         // Human explanation:
         // We want parity with the Node CLI behavior where `--owner-type ALL`
         // means "export for all owner types".
-        let cli = Cli::try_parse_from(["mds-cli", "metafield", "export", "--owner-type", "ALL"])
+        let cli = Cli::try_parse_from(["mdsr-cli", "metafield", "export", "--owner-type", "ALL"])
             .unwrap();
 
         match cli.command {
@@ -133,6 +141,7 @@ mod tests {
                 MetafieldCommand::Import { .. } => panic!("expected metafield export"),
             },
             Command::Metaobject { .. } => panic!("expected metafield command"),
+            Command::Version { .. } => panic!("expected metafield command"),
         }
     }
 
@@ -141,7 +150,7 @@ mod tests {
         // Human explanation:
         // We support comma-separated owner types in a single flag value.
         let cli = Cli::try_parse_from([
-            "mds-cli",
+            "mdsr-cli",
             "metafield",
             "export",
             "--owner-type",
@@ -157,12 +166,13 @@ mod tests {
                 MetafieldCommand::Import { .. } => panic!("expected metafield export"),
             },
             Command::Metaobject { .. } => panic!("expected metafield command"),
+            Command::Version { .. } => panic!("expected metafield command"),
         }
     }
 
     #[test]
     fn parses_metafield_import_product_defaults() {
-        let cli = Cli::try_parse_from(["mds-cli", "metafield", "import"]).unwrap();
+        let cli = Cli::try_parse_from(["mdsr-cli", "metafield", "import"]).unwrap();
         match cli.command {
             Command::Metafield { command } => match command {
                 MetafieldCommand::Import {
@@ -177,13 +187,14 @@ mod tests {
                 _ => panic!("expected metafield import"),
             },
             Command::Metaobject { .. } => panic!("expected metafield command"),
+            Command::Version { .. } => panic!("expected metafield command"),
         }
     }
 
     #[test]
     fn parses_metafield_import_owner_type() {
         let cli = Cli::try_parse_from([
-            "mds-cli",
+            "mdsr-cli",
             "metafield",
             "import",
             "--owner-type",
@@ -198,30 +209,33 @@ mod tests {
                 _ => panic!("expected metafield import"),
             },
             Command::Metaobject { .. } => panic!("expected metafield command"),
+            Command::Version { .. } => panic!("expected metafield command"),
         }
     }
 
     #[test]
     fn parses_metaobject_export() {
-        let cli = Cli::try_parse_from(["mds-cli", "metaobject", "export"]).unwrap();
+        let cli = Cli::try_parse_from(["mdsr-cli", "metaobject", "export"]).unwrap();
         match cli.command {
             Command::Metaobject { command } => match command {
                 MetaobjectCommand::Export {} => {}
                 MetaobjectCommand::Import {} => panic!("expected metaobject export"),
             },
             Command::Metafield { .. } => panic!("expected metaobject command"),
+            Command::Version { .. } => panic!("expected metaobject command"),
         }
     }
 
     #[test]
     fn parses_metaobject_import() {
-        let cli = Cli::try_parse_from(["mds-cli", "metaobject", "import"]).unwrap();
+        let cli = Cli::try_parse_from(["mdsr-cli", "metaobject", "import"]).unwrap();
         match cli.command {
             Command::Metaobject { command } => match command {
                 MetaobjectCommand::Import {} => {}
                 MetaobjectCommand::Export {} => panic!("expected metaobject import"),
             },
             Command::Metafield { .. } => panic!("expected metaobject command"),
+            Command::Version { .. } => panic!("expected metaobject command"),
         }
     }
 
@@ -232,7 +246,7 @@ mod tests {
         // - `--ci` disables interactive prompts
         // - `--environment <name>` selects `.env.<name>`
         let cli = Cli::try_parse_from([
-            "mds-cli",
+            "mdsr-cli",
             "--ci",
             "--environment",
             "my-dev",

@@ -1,0 +1,74 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build binaries (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-14]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain (from rust-toolchain.toml)
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.83.0
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: release-${{ matrix.os }}
+
+      - name: Build (release)
+        run: cargo build -p mds_cli --release --locked
+
+      - name: Compute artifact name
+        id: vars
+        shell: bash
+        run: |
+          set -euo pipefail
+          host="$(rustc -vV | sed -n 's/^host: //p')"
+          version="${GITHUB_REF_NAME}"
+          echo "host=$host" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "base_name=mdsr-cli-${version}-${host}" >> "$GITHUB_OUTPUT"
+          if [[ "$host" == "aarch64-apple-darwin" ]]; then
+            echo "latest_name=mdsr-cli-macos-arm64" >> "$GITHUB_OUTPUT"
+          elif [[ "$host" == "x86_64-unknown-linux-gnu" ]]; then
+            echo "latest_name=mdsr-cli-linux-x86_64" >> "$GITHUB_OUTPUT"
+          else
+            echo "latest_name=mdsr-cli-${host}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Package (tar.gz)
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          tar -C target/release -czf "dist/${{ steps.vars.outputs.base_name }}.tar.gz" mdsr-cli
+          cp "dist/${{ steps.vars.outputs.base_name }}.tar.gz" "dist/${{ steps.vars.outputs.latest_name }}.tar.gz"
+
+      - name: Upload to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true
+          body: |
+            ## Smoke checklist
+            - [ ] `mdsr-cli --help` runs on each OS (Linux/macOS arm64)
+            - [ ] `mdsr-cli metafield export --owner-type PRODUCT` works in a dev store
+            - [ ] `mdsr-cli metaobject export` works in a dev store
+            - [ ] Import smoke (non-destructive): `mdsr-cli metafield import --owner-type PRODUCT` and `mdsr-cli metaobject import` (verify it prints the dependency tree and can be skipped)
+
