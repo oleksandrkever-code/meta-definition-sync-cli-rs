@@ -151,4 +151,3 @@ pub struct MetafieldDefinitionDeleteData {
     #[serde(rename = "metafieldDefinitionDelete")]
     pub metafield_definition_delete: MetafieldDefinitionDeletePayload,
 }
-

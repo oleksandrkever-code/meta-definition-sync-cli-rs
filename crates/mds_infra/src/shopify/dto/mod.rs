@@ -51,4 +51,3 @@ pub fn format_user_errors(errors: &[UserErrorNode]) -> String {
 
 pub mod metafields;
 pub mod metaobjects;
-

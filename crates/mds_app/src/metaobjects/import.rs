@@ -21,7 +21,9 @@ use super::deps::{
     render_dependency_forest_text,
 };
 use super::export::{ShopifyMetaobjectDefinition, ShopifyMetaobjectFieldDefinition};
-use super::types::{MetaobjectCapabilitiesConfig, MetaobjectDefinitionConfig, MetaobjectValidationRule};
+use super::types::{
+    MetaobjectCapabilitiesConfig, MetaobjectDefinitionConfig, MetaobjectValidationRule,
+};
 
 // -------------------------------
 // Planning DTO
@@ -71,7 +73,9 @@ where
 
         let parsed =
             crate::validation::parse_json_with_path::<Vec<MetaobjectDefinitionConfig>>(&json)
-        .map_err(|errs| AppError::Json(crate::validation::format_validation_errors(&errs)))?;
+                .map_err(|errs| {
+                    AppError::Json(crate::validation::format_validation_errors(&errs))
+                })?;
 
         if parsed.is_empty() {
             return Err(AppError::Json(format!(
@@ -116,11 +120,8 @@ where
         missing_external.sort();
 
         // For rendering, we need deps map for all types (internal deps only).
-        let tree_markdown = render_dependency_forest_text(
-            &internal_deps,
-            &external_in_shopify,
-            &missing_external,
-        );
+        let tree_markdown =
+            render_dependency_forest_text(&internal_deps, &external_in_shopify, &missing_external);
 
         if !missing_external.is_empty() {
             logger.log(
@@ -204,9 +205,13 @@ pub struct MetaobjectDefinitionUpdateInput {
 #[serde(untagged)]
 pub enum MetaobjectFieldDefinitionOperation {
     #[serde(rename_all = "camelCase")]
-    Create { create: MetaobjectFieldDefinitionCreateInput },
+    Create {
+        create: MetaobjectFieldDefinitionCreateInput,
+    },
     #[serde(rename_all = "camelCase")]
-    Update { update: MetaobjectFieldDefinitionUpdateInput },
+    Update {
+        update: MetaobjectFieldDefinitionUpdateInput,
+    },
 }
 
 fn resolve_validations_for_shopify(
@@ -249,7 +254,11 @@ fn resolve_validations_for_shopify(
         out.push(rule);
     }
 
-    if out.is_empty() { None } else { Some(out) }
+    if out.is_empty() {
+        None
+    } else {
+        Some(out)
+    }
 }
 
 fn build_create_input(
@@ -301,7 +310,11 @@ fn build_update_input(
                     name: f.name.clone(),
                     description: normalize_description(f.description.clone()),
                     required: f.required,
-                    validations: resolve_validations_for_shopify(&f.validations, type_to_id, logger),
+                    validations: resolve_validations_for_shopify(
+                        &f.validations,
+                        type_to_id,
+                        logger,
+                    ),
                 },
             });
         } else {
@@ -312,7 +325,11 @@ fn build_update_input(
                     description: normalize_description(f.description.clone()),
                     type_name: f.type_name.clone(),
                     required: f.required,
-                    validations: resolve_validations_for_shopify(&f.validations, type_to_id, logger),
+                    validations: resolve_validations_for_shopify(
+                        &f.validations,
+                        type_to_id,
+                        logger,
+                    ),
                 },
             });
         }
@@ -331,7 +348,10 @@ fn normalize_existing_field_desc(d: &Option<String>) -> Option<String> {
     normalize_description(d.clone())
 }
 
-fn validations_equal(a: &Option<Vec<MetaobjectValidationRule>>, b: &Vec<MetaobjectValidationRule>) -> bool {
+fn validations_equal(
+    a: &Option<Vec<MetaobjectValidationRule>>,
+    b: &Vec<MetaobjectValidationRule>,
+) -> bool {
     let a_json = match a {
         None => None,
         Some(v) if v.is_empty() => None,
@@ -355,7 +375,9 @@ fn has_changes(
         return true;
     }
 
-    if normalize_description(existing.description.clone()) != normalize_description(cfg.description.clone()) {
+    if normalize_description(existing.description.clone())
+        != normalize_description(cfg.description.clone())
+    {
         return true;
     }
 
@@ -377,7 +399,8 @@ fn has_changes(
         existing_by_key.insert(f.key.clone(), f);
     }
 
-    let mut cfg_by_key: HashMap<String, &super::types::MetaobjectFieldDefinitionConfig> = HashMap::new();
+    let mut cfg_by_key: HashMap<String, &super::types::MetaobjectFieldDefinitionConfig> =
+        HashMap::new();
     for f in &cfg.field_definitions {
         cfg_by_key.insert(f.key.clone(), f);
     }
@@ -543,7 +566,8 @@ where
                                     ))
                                 })?;
                                 let input = build_update_input(cfg, ex, &type_to_id, logger);
-                                self.gateway.metaobject_definition_update(id, &input, logger)?;
+                                self.gateway
+                                    .metaobject_definition_update(id, &input, logger)?;
                                 item.action = MetaobjectImportAction::Update;
                                 Ok(())
                             } else {
@@ -626,7 +650,8 @@ where
         // Persist report (parity with metafield import + Node importer).
         let ts = self.clock.now_timestamp_millis();
         let report_path = format!(
-            "reports/metaobject-definitions:import/metaobject-import-report-{ts}.json"
+            "reports/metaobject-definitions:import/metaobject-import-report-{}.json",
+            ts
         );
         let out =
             serde_json::to_string_pretty(&report).map_err(|e| AppError::Json(e.to_string()))?;
@@ -635,4 +660,3 @@ where
         Ok(report)
     }
 }
-

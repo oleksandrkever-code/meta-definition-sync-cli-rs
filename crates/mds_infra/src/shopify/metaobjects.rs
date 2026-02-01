@@ -2,20 +2,20 @@
 
 use std::collections::HashMap;
 
+use mds_app::metaobjects::export::{ShopifyMetaobjectDefinition, ShopifyMetaobjectFieldDefinition};
 use mds_app::{
     logging::{LogField, LogLevel, Logger},
     AppError, CapabilityFlag, MetaobjectAccessConfig, MetaobjectCapabilitiesConfig,
     MetaobjectValidationRule,
 };
-use mds_app::metaobjects::export::{ShopifyMetaobjectDefinition, ShopifyMetaobjectFieldDefinition};
 
+use crate::shopify::dto::metaobjects::MetaobjectDefsDataForExport;
+use crate::shopify::dto::{format_user_errors, metaobjects::*};
 use crate::shopify::{
     client::ShopifyClient,
     dto::{metaobjects::MetaobjectDefsData, metaobjects::MetaobjectDefsVars},
     graphql,
 };
-use crate::shopify::dto::metaobjects::MetaobjectDefsDataForExport;
-use crate::shopify::dto::{format_user_errors, metaobjects::*};
 
 pub fn fetch_metaobject_id_to_type_map(
     client: &ShopifyClient,
@@ -51,9 +51,9 @@ pub fn fetch_metaobject_id_to_type_map(
             )));
         }
 
-        let data = body
-            .data
-            .ok_or_else(|| AppError::Gateway("missing data in metaobjectDefinitions response".into()))?;
+        let data = body.data.ok_or_else(|| {
+            AppError::Gateway("missing data in metaobjectDefinitions response".into())
+        })?;
 
         for edge in data.metaobject_definitions.edges {
             out.insert(edge.node.id, edge.node.r#type);
@@ -106,9 +106,9 @@ pub fn list_metaobject_definitions_full(
             )));
         }
 
-        let data = body
-            .data
-            .ok_or_else(|| AppError::Gateway("missing data in metaobjectDefinitions response".into()))?;
+        let data = body.data.ok_or_else(|| {
+            AppError::Gateway("missing data in metaobjectDefinitions response".into())
+        })?;
 
         for edge in data.metaobject_definitions.edges {
             let access = edge.node.access.map(|a| MetaobjectAccessConfig {
@@ -116,20 +116,19 @@ pub fn list_metaobject_definitions_full(
                 storefront: a.storefront,
             });
 
-            let capabilities = edge.node.capabilities.map(|c| MetaobjectCapabilitiesConfig {
-                publishable: c
-                    .publishable
-                    .map(|f| CapabilityFlag { enabled: f.enabled }),
-                translatable: c
-                    .translatable
-                    .map(|f| CapabilityFlag { enabled: f.enabled }),
-                renderable: c
-                    .renderable
-                    .map(|f| CapabilityFlag { enabled: f.enabled }),
-                online_store: c
-                    .online_store
-                    .map(|f| CapabilityFlag { enabled: f.enabled }),
-            });
+            let capabilities = edge
+                .node
+                .capabilities
+                .map(|c| MetaobjectCapabilitiesConfig {
+                    publishable: c.publishable.map(|f| CapabilityFlag { enabled: f.enabled }),
+                    translatable: c
+                        .translatable
+                        .map(|f| CapabilityFlag { enabled: f.enabled }),
+                    renderable: c.renderable.map(|f| CapabilityFlag { enabled: f.enabled }),
+                    online_store: c
+                        .online_store
+                        .map(|f| CapabilityFlag { enabled: f.enabled }),
+                });
 
             let field_definitions = edge
                 .node
@@ -226,7 +225,11 @@ pub fn metaobject_definition_create(
         )));
     }
 
-    if data.metaobject_definition_create.metaobject_definition.is_none() {
+    if data
+        .metaobject_definition_create
+        .metaobject_definition
+        .is_none()
+    {
         return Err(AppError::Gateway(
             "metaobjectDefinitionCreate did not return metaobjectDefinition".into(),
         ));
@@ -247,7 +250,10 @@ pub fn metaobject_definition_update(
         &[LogField::new("id", id.to_string())],
     );
 
-    let vars = MetaobjectDefinitionUpdateVars { id, definition: input };
+    let vars = MetaobjectDefinitionUpdateVars {
+        id,
+        definition: input,
+    };
     let body = client.post_graphql::<_, MetaobjectDefinitionUpdateData>(
         graphql::METAOBJECT_DEFINITION_UPDATE_MUTATION,
         vars,
@@ -270,7 +276,11 @@ pub fn metaobject_definition_update(
         )));
     }
 
-    if data.metaobject_definition_update.metaobject_definition.is_none() {
+    if data
+        .metaobject_definition_update
+        .metaobject_definition
+        .is_none()
+    {
         return Err(AppError::Gateway(
             "metaobjectDefinitionUpdate did not return metaobjectDefinition".into(),
         ));
@@ -278,4 +288,3 @@ pub fn metaobject_definition_update(
 
     Ok(())
 }
-

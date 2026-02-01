@@ -35,4 +35,3 @@ pub fn parse_json_with_path<T: DeserializeOwned>(json: &str) -> Result<T, Vec<Va
         }
     }
 }
-

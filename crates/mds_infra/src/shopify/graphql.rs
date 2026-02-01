@@ -182,4 +182,3 @@ query metaobjectDefinitions($first: Int!, $after: String) {
         }
     }
 }"#;
-

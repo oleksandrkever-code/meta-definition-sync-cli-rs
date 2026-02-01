@@ -3,16 +3,16 @@ mod cli;
 use clap::Parser;
 use cli::{Cli, Command, MetafieldCommand, MetaobjectCommand};
 use dialoguer::Select;
+use mds_app::config::{Environment, EnvironmentService, LogFormat};
+use mds_app::logging::{ContextLogger, LogField, LogLevel, Logger};
 use mds_app::{
     ExportMetafieldsToFileUseCase, ExportMetaobjectsToFileUseCase, ImportMetafieldsFromFileUseCase,
     ImportMetafieldsOptions, ImportMetaobjectsFromFileUseCase, PlanMetaobjectsImportUseCase,
     SystemClock,
 };
-use mds_app::config::{Environment, EnvironmentService, LogFormat};
-use mds_app::logging::{ContextLogger, LogField, LogLevel, Logger};
 use mds_domain::{parse_owner_types, OwnerType};
-use mds_infra::{env_service::DotenvEnvironmentService, ShopifyMetafieldGateway, FsFileRepo};
 use mds_infra::logger::TracingLogger;
+use mds_infra::{env_service::DotenvEnvironmentService, FsFileRepo, ShopifyMetafieldGateway};
 use serde::{Deserialize, Serialize};
 use std::io::IsTerminal;
 use std::time::Duration;
@@ -146,16 +146,16 @@ fn main() {
                     Some(v) => v.to_string(),
                     None => {
                         if cli.ci {
-                            logger.log(
-                                LogLevel::Error,
-                                "--owner-type is required in CI mode",
-                                &[],
-                            );
+                            logger.log(LogLevel::Error, "--owner-type is required in CI mode", &[]);
                             std::process::exit(2);
                         }
 
                         let mut items = vec!["ALL".to_string()];
-                        items.extend(OwnerType::all().into_iter().map(|ot| ot.as_str().to_string()));
+                        items.extend(
+                            OwnerType::all()
+                                .into_iter()
+                                .map(|ot| ot.as_str().to_string()),
+                        );
                         let selection = Select::new()
                             .with_prompt("Select metafield owner type to import")
                             .items(&items)
@@ -237,7 +237,10 @@ fn main() {
                                 &[
                                     LogField::new("created", report.summary.created.to_string()),
                                     LogField::new("updated", report.summary.updated.to_string()),
-                                    LogField::new("recreated", report.summary.recreated.to_string()),
+                                    LogField::new(
+                                        "recreated",
+                                        report.summary.recreated.to_string(),
+                                    ),
                                     LogField::new("noChange", report.summary.no_change.to_string()),
                                     LogField::new("failed", report.summary.failed.to_string()),
                                     LogField::new("total", report.summary.total.to_string()),
@@ -403,7 +406,12 @@ fn maybe_check_for_updates_on_startup(cli: &Cli, config: &mds_app::config::Store
     }
 
     // Best-effort: update cache even if request fails (avoid retry loops).
-    write_update_cache(&cache_path, &UpdateCheckCache { last_checked_unix: now });
+    write_update_cache(
+        &cache_path,
+        &UpdateCheckCache {
+            last_checked_unix: now,
+        },
+    );
 
     // Silent unless update exists.
     if let Some(msg) = check_update_message(Duration::from_secs(2)) {
@@ -445,7 +453,10 @@ fn check_update_message(timeout: Duration) -> Option<String> {
 
     let resp = client
         .get(api_url)
-        .header("User-Agent", format!("mdsr-cli/{}", env!("CARGO_PKG_VERSION")))
+        .header(
+            "User-Agent",
+            format!("mdsr-cli/{}", env!("CARGO_PKG_VERSION")),
+        )
         .send()
         .ok()?;
 
@@ -507,7 +518,9 @@ fn update_check_cache_path() -> std::path::PathBuf {
     let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
 
     #[cfg(target_os = "macos")]
-    let base = std::path::PathBuf::from(home).join("Library").join("Caches");
+    let base = std::path::PathBuf::from(home)
+        .join("Library")
+        .join("Caches");
 
     #[cfg(not(target_os = "macos"))]
     let base = std::env::var("XDG_CACHE_HOME")
@@ -537,7 +550,7 @@ fn select_environment<'a>(cli: &Cli, envs: &'a [Environment]) -> Result<&'a Envi
         return envs
             .iter()
             .find(|e| e.name == name)
-            .ok_or_else(|| format!("Invalid environment \"{name}\"")) ;
+            .ok_or_else(|| format!("Invalid environment \"{name}\""));
     }
 
     // 2) If `.env` exists, prefer it (Node-like default environment behavior).
@@ -552,8 +565,14 @@ fn select_environment<'a>(cli: &Cli, envs: &'a [Environment]) -> Result<&'a Envi
 
     // 4) If CI mode and multiple envs exist, require explicit selection.
     if cli.ci {
-        let names = envs.iter().map(|e| e.name.clone()).collect::<Vec<_>>().join(", ");
-        return Err(format!("--environment is required in CI mode. Available: {names}"));
+        let names = envs
+            .iter()
+            .map(|e| e.name.clone())
+            .collect::<Vec<_>>()
+            .join(", ");
+        return Err(format!(
+            "--environment is required in CI mode. Available: {names}"
+        ));
     }
 
     // 5) Interactive selection.

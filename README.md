@@ -348,6 +348,19 @@ The Rust rewrite lives in this repository root. The roadmap is intentionally kep
 
 ## 🧪 Development
 
+### Git hooks (auto-format before commit)
+
+This repo supports git hooks via **Lefthook** to run:
+
+- `cargo fmt --all` on `pre-commit`
+
+Install and enable hooks:
+
+```bash
+brew install lefthook
+lefthook install
+```
+
 Run tests:
 
 ```bash

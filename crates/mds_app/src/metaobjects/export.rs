@@ -6,14 +6,14 @@
 
 use std::collections::HashMap;
 
-use serde::{Deserialize, Serialize};
-use crate::error::AppError;
-use crate::logging::Logger;
-use crate::ports::{FileRepo, MetaobjectGateway};
 use super::types::{
     MetaobjectAccessConfig, MetaobjectCapabilitiesConfig, MetaobjectFieldDefinitionConfig,
     MetaobjectValidationRule,
 };
+use crate::error::AppError;
+use crate::logging::Logger;
+use crate::ports::{FileRepo, MetaobjectGateway};
+use serde::{Deserialize, Serialize};
 
 /// Read-model for metaobject definition returned by a gateway (Shopify).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -233,8 +233,8 @@ where
             .collect();
 
         let exported = export_metaobject_definitions(defs, &id_to_type);
-        let json = serde_json::to_string_pretty(&exported)
-            .map_err(|e| AppError::Json(e.to_string()))?;
+        let json =
+            serde_json::to_string_pretty(&exported).map_err(|e| AppError::Json(e.to_string()))?;
         repo.write_text("definitions/metaobjects.json", &json)?;
         Ok(exported)
     }
@@ -296,8 +296,14 @@ mod tests {
         ];
 
         let id_to_type = HashMap::from([
-            ("gid://shopify/MetaobjectDefinition/1".to_string(), "shopify--system".to_string()),
-            ("gid://shopify/MetaobjectDefinition/2".to_string(), "custom_type".to_string()),
+            (
+                "gid://shopify/MetaobjectDefinition/1".to_string(),
+                "shopify--system".to_string(),
+            ),
+            (
+                "gid://shopify/MetaobjectDefinition/2".to_string(),
+                "custom_type".to_string(),
+            ),
         ]);
 
         let out = export_metaobject_definitions(input, &id_to_type);
@@ -420,4 +426,3 @@ mod tests {
         assert!(repo.writes.contains_key("definitions/metaobjects.json"));
     }
 }
-

@@ -7,7 +7,10 @@ use mds_app::{
     AppError,
 };
 
-use crate::shopify::{dto::{GraphQlRequest, GraphQlResponse}, graphql};
+use crate::shopify::{
+    dto::{GraphQlRequest, GraphQlResponse},
+    graphql,
+};
 
 #[derive(Debug, Clone)]
 pub struct ShopifyClient {
@@ -26,7 +29,8 @@ impl ShopifyClient {
     fn endpoint(&self) -> String {
         format!(
             "https://{}/admin/api/{}/graphql.json",
-            self.shop_domain, graphql::API_VERSION
+            self.shop_domain,
+            graphql::API_VERSION
         )
     }
 
@@ -64,10 +68,7 @@ impl ShopifyClient {
             )));
         }
 
-        let body: GraphQlResponse<D> = resp
-            .json()
-            .map_err(|e| AppError::Gateway(e.to_string()))?;
+        let body: GraphQlResponse<D> = resp.json().map_err(|e| AppError::Gateway(e.to_string()))?;
         Ok(body)
     }
 }
-

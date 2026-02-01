@@ -11,8 +11,7 @@ use mds_domain::OwnerType;
 use crate::shopify::{
     client::ShopifyClient,
     dto::{format_user_errors, metafields::*},
-    graphql,
-    metaobjects,
+    graphql, metaobjects,
 };
 
 fn convert_validations_id_to_type(
@@ -104,17 +103,20 @@ pub fn list_metafield_definitions(
                     storefront: a.storefront,
                     customer_account: a.customer_account,
                 }),
-                capabilities: edge.node.capabilities.map(|c| mds_app::MetafieldCapabilities {
-                    admin_filterable: c.admin_filterable.map(|x| mds_app::CapabilityFlag {
-                        enabled: x.enabled,
+                capabilities: edge
+                    .node
+                    .capabilities
+                    .map(|c| mds_app::MetafieldCapabilities {
+                        admin_filterable: c
+                            .admin_filterable
+                            .map(|x| mds_app::CapabilityFlag { enabled: x.enabled }),
+                        smart_collection_condition: c
+                            .smart_collection_condition
+                            .map(|x| mds_app::CapabilityFlag { enabled: x.enabled }),
+                        unique_values: c
+                            .unique_values
+                            .map(|x| mds_app::CapabilityFlag { enabled: x.enabled }),
                     }),
-                    smart_collection_condition: c
-                        .smart_collection_condition
-                        .map(|x| mds_app::CapabilityFlag { enabled: x.enabled }),
-                    unique_values: c.unique_values.map(|x| mds_app::CapabilityFlag {
-                        enabled: x.enabled,
-                    }),
-                }),
             });
         }
 
@@ -169,7 +171,11 @@ pub fn metafield_definition_create(
         )));
     }
 
-    if data.metafield_definition_create.created_definition.is_none() {
+    if data
+        .metafield_definition_create
+        .created_definition
+        .is_none()
+    {
         return Err(AppError::Gateway(
             "metafieldDefinitionCreate did not return createdDefinition".into(),
         ));
@@ -194,7 +200,10 @@ pub fn metafield_definition_update(
         ],
     );
 
-    let vars = MetafieldDefinitionUpdateVars { id, definition: input };
+    let vars = MetafieldDefinitionUpdateVars {
+        id,
+        definition: input,
+    };
     let body = client.post_graphql::<_, MetafieldDefinitionUpdateData>(
         graphql::METAFIELD_DEFINITION_UPDATE_MUTATION,
         vars,
@@ -217,7 +226,11 @@ pub fn metafield_definition_update(
         )));
     }
 
-    if data.metafield_definition_update.updated_definition.is_none() {
+    if data
+        .metafield_definition_update
+        .updated_definition
+        .is_none()
+    {
         return Err(AppError::Gateway(
             "metafieldDefinitionUpdate did not return updatedDefinition".into(),
         ));
@@ -260,7 +273,11 @@ pub fn metafield_definition_delete(
         )));
     }
 
-    if data.metafield_definition_delete.deleted_definition_id.is_none() {
+    if data
+        .metafield_definition_delete
+        .deleted_definition_id
+        .is_none()
+    {
         return Err(AppError::Gateway(
             "metafieldDefinitionDelete did not return deletedDefinitionId".into(),
         ));
@@ -298,4 +315,3 @@ mod tests {
         assert_eq!(out[1].name, "other");
     }
 }
-

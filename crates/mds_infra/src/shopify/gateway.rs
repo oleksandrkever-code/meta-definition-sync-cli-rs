@@ -4,11 +4,8 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 use mds_app::{
-    config::StoreConfig,
-    logging::Logger,
-    AppError, MetafieldGateway, MetafieldImportGateway, MetaobjectGateway, MetaobjectImportGateway,
-    MetafieldDefinitionInput,
-    ShopifyMetafieldDefinition,
+    config::StoreConfig, logging::Logger, AppError, MetafieldDefinitionInput, MetafieldGateway,
+    MetafieldImportGateway, MetaobjectGateway, MetaobjectImportGateway, ShopifyMetafieldDefinition,
 };
 use mds_domain::OwnerType;
 
@@ -126,11 +123,7 @@ impl MetafieldImportGateway for ShopifyMetafieldGateway {
         metafields::metafield_definition_update(&self.client, id, input, logger)
     }
 
-    fn metafield_definition_delete(
-        &self,
-        id: &str,
-        logger: &dyn Logger,
-    ) -> Result<(), AppError> {
+    fn metafield_definition_delete(&self, id: &str, logger: &dyn Logger) -> Result<(), AppError> {
         metafields::metafield_definition_delete(&self.client, id, logger)
     }
 }
@@ -180,4 +173,3 @@ impl MetaobjectImportGateway for ShopifyMetafieldGateway {
         let _ = self.reset_metaobject_cache_inner();
     }
 }
-

@@ -83,14 +83,9 @@ mod tests {
         //   mdsr-cli metafield export --owner-type PRODUCT
         // If we change flags/subcommands later, this test will fail and force us
         // to consciously update CLI behavior.
-        let cli = Cli::try_parse_from([
-            "mdsr-cli",
-            "metafield",
-            "export",
-            "--owner-type",
-            "PRODUCT",
-        ])
-        .unwrap();
+        let cli =
+            Cli::try_parse_from(["mdsr-cli", "metafield", "export", "--owner-type", "PRODUCT"])
+                .unwrap();
 
         match cli.command {
             Command::Metafield { command } => match command {
@@ -259,4 +254,3 @@ mod tests {
         assert_eq!(cli.environment.as_deref(), Some("my-dev"));
     }
 }
-

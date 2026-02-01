@@ -1,8 +1,8 @@
 //! Infrastructure layer (adapters: filesystem, HTTP clients, env loading, etc.)
 
 pub mod env_service;
-pub mod shopify;
 pub mod logger;
+pub mod shopify;
 
 pub use shopify::gateway::ShopifyMetafieldGateway;
 
@@ -44,7 +44,10 @@ impl FileRepo for FsFileRepo {
 mod tests {
     use super::*;
 
-    use std::{fs, time::{SystemTime, UNIX_EPOCH}};
+    use std::{
+        fs,
+        time::{SystemTime, UNIX_EPOCH},
+    };
 
     #[test]
     fn fs_file_repo_writes_file_and_creates_parent_dirs() {
@@ -64,8 +67,11 @@ mod tests {
         let target = base.join("../../../definitions1/metafields/product.json");
 
         let mut repo = FsFileRepo::new();
-        repo.write_text(target.to_str().unwrap(), "[{\"namespace\":\"custom\",\"key\":\"k\"}]")
-            .unwrap();
+        repo.write_text(
+            target.to_str().unwrap(),
+            "[{\"namespace\":\"custom\",\"key\":\"k\"}]",
+        )
+        .unwrap();
 
         let written = fs::read_to_string(&target).unwrap();
         assert!(written.contains("\"namespace\""));

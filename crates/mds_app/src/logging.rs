@@ -46,7 +46,10 @@ impl<'a> ContextLogger<'a> {
     pub fn with<'b>(&'b self, more: &'b [LogField]) -> ContextLogger<'b> {
         // Create a view that uses caller-provided slice as context overlay.
         // (Caller can pass combined slices if they want deeper nesting.)
-        ContextLogger { inner: self, ctx: more }
+        ContextLogger {
+            inner: self,
+            ctx: more,
+        }
     }
 }
 
@@ -61,4 +64,3 @@ impl Logger for ContextLogger<'_> {
         self.inner.log(level, message, &merged);
     }
 }
-

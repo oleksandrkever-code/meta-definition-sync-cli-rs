@@ -128,7 +128,11 @@ fn validations_to_input(
         })
         .collect::<Vec<_>>();
 
-    if out.is_empty() { None } else { Some(out) }
+    if out.is_empty() {
+        None
+    } else {
+        Some(out)
+    }
 }
 
 fn capabilities_to_input(
@@ -141,7 +145,9 @@ fn capabilities_to_input(
         smart_collection_condition: c
             .smart_collection_condition
             .map(|x| CapabilityFlag { enabled: x.enabled }),
-        unique_values: c.unique_values.map(|x| CapabilityFlag { enabled: x.enabled }),
+        unique_values: c
+            .unique_values
+            .map(|x| CapabilityFlag { enabled: x.enabled }),
     })
 }
 
@@ -457,7 +463,8 @@ where
                             pin: cfg.pin,
                             capabilities: capabilities_to_input(cfg.capabilities.clone()),
                         };
-                        self.gateway.metafield_definition_update(&id, &input, logger)?;
+                        self.gateway
+                            .metafield_definition_update(&id, &input, logger)?;
 
                         report.summary.updated += 1;
                         report.items.push(MetafieldImportItemReport {
@@ -565,7 +572,8 @@ where
         // Persist report.
         let ts = self.clock.now_timestamp_millis();
         let report_path = format!(
-            "reports/metafield-definitions:import/metafield-import-report-{ts}.json"
+            "reports/metafield-definitions:import/metafield-import-report-{}.json",
+            ts
         );
         let out =
             serde_json::to_string_pretty(&report).map_err(|e| AppError::Json(e.to_string()))?;
@@ -574,4 +582,3 @@ where
         Ok(report)
     }
 }
-

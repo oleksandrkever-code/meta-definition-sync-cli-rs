@@ -46,4 +46,3 @@ pub trait EnvironmentService {
     fn detect(&self) -> Result<Vec<Environment>, crate::AppError>;
     fn load_store_config(&self, env: &Environment) -> Result<StoreConfig, crate::AppError>;
 }
-

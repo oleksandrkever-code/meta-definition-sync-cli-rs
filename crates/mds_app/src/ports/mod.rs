@@ -8,7 +8,9 @@ use crate::error::AppError;
 use crate::logging::Logger;
 use crate::metafields::types::{MetafieldDefinitionInput, ShopifyMetafieldDefinition};
 use crate::metaobjects::export::ShopifyMetaobjectDefinition;
-use crate::metaobjects::import::{MetaobjectDefinitionCreateInput, MetaobjectDefinitionUpdateInput};
+use crate::metaobjects::import::{
+    MetaobjectDefinitionCreateInput, MetaobjectDefinitionUpdateInput,
+};
 
 pub trait MetafieldGateway {
     fn list_metafield_definitions(
@@ -62,8 +64,10 @@ pub trait MetafieldImportGateway {
     ) -> Result<Vec<ShopifyMetafieldDefinition>, AppError>;
 
     /// Map metaobject definition type -> Shopify GID.
-    fn metaobject_type_to_id_map(&self, logger: &dyn Logger)
-        -> Result<HashMap<String, String>, AppError>;
+    fn metaobject_type_to_id_map(
+        &self,
+        logger: &dyn Logger,
+    ) -> Result<HashMap<String, String>, AppError>;
 
     fn metafield_definition_create(
         &self,
@@ -106,4 +110,3 @@ impl Clock for SystemClock {
         std::thread::sleep(std::time::Duration::from_millis(millis));
     }
 }
-

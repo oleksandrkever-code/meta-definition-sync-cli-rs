@@ -6,9 +6,9 @@ pub mod metafield_config;
 pub mod validation;
 
 pub mod error;
-pub mod ports;
 pub mod metafields;
 pub mod metaobjects;
+pub mod ports;
 
 #[cfg(test)]
 mod metafield_config_tests;

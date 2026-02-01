@@ -56,13 +56,18 @@ impl DotenvEnvironmentService {
     }
 
     fn parse_env_file(&self, path: &PathBuf) -> Result<HashMap<String, String>, AppError> {
-        let iter = dotenvy::from_path_iter(path)
-            .map_err(|e| AppError::Config(format!("failed to read env file {}: {}", path.display(), e)))?;
+        let iter = dotenvy::from_path_iter(path).map_err(|e| {
+            AppError::Config(format!("failed to read env file {}: {}", path.display(), e))
+        })?;
 
         let mut map = HashMap::new();
         for item in iter {
             let (k, v) = item.map_err(|e| {
-                AppError::Config(format!("failed to parse env file {}: {}", path.display(), e))
+                AppError::Config(format!(
+                    "failed to parse env file {}: {}",
+                    path.display(),
+                    e
+                ))
             })?;
             map.insert(k, v);
         }
@@ -90,8 +95,13 @@ impl DotenvEnvironmentService {
 
 impl EnvironmentService for DotenvEnvironmentService {
     fn detect(&self) -> Result<Vec<Environment>, AppError> {
-        let entries = fs::read_dir(&self.root)
-            .map_err(|e| AppError::Config(format!("cannot read directory {}: {}", self.root.display(), e)))?;
+        let entries = fs::read_dir(&self.root).map_err(|e| {
+            AppError::Config(format!(
+                "cannot read directory {}: {}",
+                self.root.display(),
+                e
+            ))
+        })?;
         let filenames: Vec<String> = entries
             .flatten()
             .map(|e| e.file_name().to_string_lossy().to_string())
@@ -154,4 +164,3 @@ mod tests {
         assert_eq!(envs[1].name, "my-dev");
     }
 }
-

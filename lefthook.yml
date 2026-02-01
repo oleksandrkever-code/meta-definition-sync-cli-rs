@@ -1,0 +1,4 @@
+pre-commit:
+  commands:
+    rustfmt:
+      run: cargo fmt --all

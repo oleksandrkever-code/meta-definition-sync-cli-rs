@@ -117,4 +117,3 @@ pub struct MetafieldDefinitionInput {
 fn is_false(v: &bool) -> bool {
     !*v
 }
-

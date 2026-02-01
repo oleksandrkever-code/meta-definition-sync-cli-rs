@@ -2,7 +2,9 @@
 
 use serde::{Deserialize, Serialize};
 
-use mds_app::metaobjects::import::{MetaobjectDefinitionCreateInput, MetaobjectDefinitionUpdateInput};
+use mds_app::metaobjects::import::{
+    MetaobjectDefinitionCreateInput, MetaobjectDefinitionUpdateInput,
+};
 
 use super::{IdNode, PageInfo, UserErrorNode};
 
@@ -166,4 +168,3 @@ pub struct MetaobjectDefinitionUpdateData {
     #[serde(rename = "metaobjectDefinitionUpdate")]
     pub metaobject_definition_update: MetaobjectDefinitionUpdatePayload,
 }
-

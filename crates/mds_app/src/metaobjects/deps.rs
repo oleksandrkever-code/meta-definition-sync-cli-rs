@@ -248,10 +248,11 @@ pub fn normalize_display_name_key(k: Option<String>) -> Option<String> {
     }
 }
 
-pub fn normalize_validations(v: &Option<Vec<MetaobjectValidationRule>>) -> Vec<MetaobjectValidationRule> {
+pub fn normalize_validations(
+    v: &Option<Vec<MetaobjectValidationRule>>,
+) -> Vec<MetaobjectValidationRule> {
     match v {
         None => vec![],
         Some(list) => list.clone(),
     }
 }
-

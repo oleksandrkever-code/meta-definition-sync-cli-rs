@@ -136,8 +136,8 @@ where
 
         let owner = owner_type.as_str().to_ascii_lowercase();
         let path = format!("definitions/metafields/{owner}.json");
-        let json = serde_json::to_string_pretty(&exported)
-            .map_err(|e| AppError::Json(e.to_string()))?;
+        let json =
+            serde_json::to_string_pretty(&exported).map_err(|e| AppError::Json(e.to_string()))?;
         repo.write_text(&path, &json)?;
 
         Ok(exported)
@@ -343,4 +343,3 @@ mod tests {
         assert_eq!(parsed, exported);
     }
 }
-

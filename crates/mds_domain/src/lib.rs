@@ -104,7 +104,11 @@ pub fn parse_owner_types(input: &str) -> Result<Vec<OwnerType>, ParseOwnerTypesE
         return Ok(OwnerType::all());
     }
 
-    let parts: Vec<&str> = trimmed.split(',').map(|s| s.trim()).filter(|s| !s.is_empty()).collect();
+    let parts: Vec<&str> = trimmed
+        .split(',')
+        .map(|s| s.trim())
+        .filter(|s| !s.is_empty())
+        .collect();
     let mut invalid = vec![];
     let mut out = vec![];
 

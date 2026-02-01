@@ -84,4 +84,3 @@ pub struct MetafieldCapabilitiesConfig {
     #[serde(rename = "uniqueValues", default)]
     pub unique_values: Option<CapabilityFlagConfig>,
 }
-

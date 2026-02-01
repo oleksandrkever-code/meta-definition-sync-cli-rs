@@ -76,4 +76,3 @@ pub struct MetaobjectCapabilitiesConfig {
     #[serde(rename = "onlineStore", default)]
     pub online_store: Option<CapabilityFlag>,
 }
-
