@@ -165,7 +165,8 @@ pub fn export_metaobject_definitions(
                                                 let mut types: Vec<String> = vec![];
                                                 let mut all_mapped = true;
                                                 for id in ids {
-                                                    if let Some(t) = metaobject_id_to_type.get(&id) {
+                                                    if let Some(t) = metaobject_id_to_type.get(&id)
+                                                    {
                                                         types.push(t.clone());
                                                     } else {
                                                         all_mapped = false;
@@ -173,7 +174,8 @@ pub fn export_metaobject_definitions(
                                                     }
                                                 }
                                                 if all_mapped {
-                                                    if let Some(json) = to_json_string_array(&types) {
+                                                    if let Some(json) = to_json_string_array(&types)
+                                                    {
                                                         return MetaobjectValidationRule {
                                                             name: "metaobject_definition_types"
                                                                 .to_string(),

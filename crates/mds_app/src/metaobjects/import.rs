@@ -233,7 +233,10 @@ fn resolve_validations_for_shopify(
         return Ok(None);
     }
 
-    let id_set = type_to_id.values().cloned().collect::<std::collections::HashSet<_>>();
+    let id_set = type_to_id
+        .values()
+        .cloned()
+        .collect::<std::collections::HashSet<_>>();
 
     let mut out: Vec<MetaobjectValidationRule> = vec![];
     for rule in v {
@@ -391,7 +394,11 @@ fn build_update_input(
                     name: f.name.clone(),
                     description: normalize_description(f.description.clone()),
                     required: f.required,
-                    validations: resolve_validations_for_shopify(&f.validations, type_to_id, logger)?,
+                    validations: resolve_validations_for_shopify(
+                        &f.validations,
+                        type_to_id,
+                        logger,
+                    )?,
                 },
             });
         } else {
@@ -402,7 +409,11 @@ fn build_update_input(
                     description: normalize_description(f.description.clone()),
                     type_name: f.type_name.clone(),
                     required: f.required,
-                    validations: resolve_validations_for_shopify(&f.validations, type_to_id, logger)?,
+                    validations: resolve_validations_for_shopify(
+                        &f.validations,
+                        type_to_id,
+                        logger,
+                    )?,
                 },
             });
         }
