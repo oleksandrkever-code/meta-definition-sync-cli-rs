@@ -15,6 +15,15 @@ use crate::logging::Logger;
 use crate::ports::{FileRepo, MetaobjectGateway};
 use serde::{Deserialize, Serialize};
 
+fn parse_json_string_array(input: &str) -> Option<Vec<String>> {
+    let v: Vec<String> = serde_json::from_str(input).ok()?;
+    Some(v)
+}
+
+fn to_json_string_array(items: &[String]) -> Option<String> {
+    serde_json::to_string(items).ok()
+}
+
 /// Read-model for metaobject definition returned by a gateway (Shopify).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ShopifyMetaobjectDefinition {
@@ -119,6 +128,7 @@ impl From<MetaobjectFieldDefinitionConfig> for ExportedMetaobjectFieldDefinition
 /// Key rules (Node parity / as-is spec):
 /// - filter out Shopify system metaobjects: `type.starts_with("shopify--")`
 /// - convert `metaobject_definition_id` validations to `metaobject_definition_type` when mapping exists
+/// - convert `metaobject_definition_ids` validations to `metaobject_definition_types` when mapping exists
 /// - omit empty validations (export should prefer `null`/missing over empty arrays)
 pub fn export_metaobject_definitions(
     input: Vec<ShopifyMetaobjectDefinition>,
@@ -146,6 +156,31 @@ pub fn export_metaobject_definitions(
                                                     name: "metaobject_definition_type".to_string(),
                                                     value: Some(t.clone()),
                                                 };
+                                            }
+                                        }
+                                    }
+                                    if v.name == "metaobject_definition_ids" {
+                                        if let Some(raw) = v.value.as_deref() {
+                                            if let Some(ids) = parse_json_string_array(raw) {
+                                                let mut types: Vec<String> = vec![];
+                                                let mut all_mapped = true;
+                                                for id in ids {
+                                                    if let Some(t) = metaobject_id_to_type.get(&id) {
+                                                        types.push(t.clone());
+                                                    } else {
+                                                        all_mapped = false;
+                                                        break;
+                                                    }
+                                                }
+                                                if all_mapped {
+                                                    if let Some(json) = to_json_string_array(&types) {
+                                                        return MetaobjectValidationRule {
+                                                            name: "metaobject_definition_types"
+                                                                .to_string(),
+                                                            value: Some(json),
+                                                        };
+                                                    }
+                                                }
                                             }
                                         }
                                     }
@@ -377,6 +412,51 @@ mod tests {
                     value: Some("x".to_string()),
                 },
             ]
+        );
+    }
+
+    #[test]
+    fn export_converts_metaobject_definition_ids_validation_to_types_when_mapping_exists() {
+        let input = vec![ShopifyMetaobjectDefinition {
+            id: Some("gid://shopify/MetaobjectDefinition/2".to_string()),
+            type_name: "custom_type".to_string(),
+            name: "Custom".to_string(),
+            description: None,
+            display_name_key: None,
+            access: None,
+            capabilities: None,
+            field_definitions: vec![ShopifyMetaobjectFieldDefinition {
+                key: "refs".to_string(),
+                name: "Refs".to_string(),
+                type_name: "list.mixed_reference".to_string(),
+                required: false,
+                description: None,
+                validations: vec![MetaobjectValidationRule {
+                    name: "metaobject_definition_ids".to_string(),
+                    value: Some("[\"gid://shopify/MetaobjectDefinition/10\",\"gid://shopify/MetaobjectDefinition/11\"]".to_string()),
+                }],
+            }],
+        }];
+
+        let id_to_type = HashMap::from([
+            (
+                "gid://shopify/MetaobjectDefinition/10".to_string(),
+                "t10".to_string(),
+            ),
+            (
+                "gid://shopify/MetaobjectDefinition/11".to_string(),
+                "t11".to_string(),
+            ),
+        ]);
+
+        let out = export_metaobject_definitions(input, &id_to_type);
+
+        assert_eq!(
+            out[0].field_definitions[0].validations.as_ref().unwrap(),
+            &vec![MetaobjectValidationRule {
+                name: "metaobject_definition_types".to_string(),
+                value: Some("[\"t10\",\"t11\"]".to_string()),
+            }]
         );
     }
 

@@ -15,6 +15,11 @@ use crate::error::AppError;
 
 use super::types::{MetaobjectDefinitionConfig, MetaobjectValidationRule};
 
+fn parse_json_string_array(input: &str) -> Option<Vec<String>> {
+    let v: Vec<String> = serde_json::from_str(input).ok()?;
+    Some(v)
+}
+
 pub fn extract_metaobject_deps(def: &MetaobjectDefinitionConfig) -> Vec<String> {
     let mut out: Vec<String> = vec![];
     for field in &def.field_definitions {
@@ -22,14 +27,43 @@ pub fn extract_metaobject_deps(def: &MetaobjectDefinitionConfig) -> Vec<String> 
             continue;
         };
         for v in validations {
-            if v.name != "metaobject_definition_type" {
-                continue;
-            }
-            if let Some(t) = v.value.as_deref() {
-                let t = t.trim();
-                if !t.is_empty() {
-                    out.push(t.to_string());
+            match v.name.as_str() {
+                // Single dependency: value is a type string.
+                "metaobject_definition_type" => {
+                    if let Some(raw) = v.value.as_deref() {
+                        let raw = raw.trim();
+                        if raw.is_empty() {
+                            continue;
+                        }
+                        // Be resilient: if someone stored JSON array here, treat it as multiple deps.
+                        if raw.starts_with('[') {
+                            if let Some(types) = parse_json_string_array(raw) {
+                                for t in types {
+                                    let t = t.trim().to_string();
+                                    if !t.is_empty() {
+                                        out.push(t);
+                                    }
+                                }
+                            }
+                        } else {
+                            out.push(raw.to_string());
+                        }
+                    }
                 }
+                // Multi dependency: value is a JSON string array of types.
+                "metaobject_definition_types" => {
+                    if let Some(raw) = v.value.as_deref() {
+                        if let Some(types) = parse_json_string_array(raw) {
+                            for t in types {
+                                let t = t.trim().to_string();
+                                if !t.is_empty() {
+                                    out.push(t);
+                                }
+                            }
+                        }
+                    }
+                }
+                _ => {}
             }
         }
     }
@@ -254,5 +288,37 @@ pub fn normalize_validations(
     match v {
         None => vec![],
         Some(list) => list.clone(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::metaobjects::types::{MetaobjectDefinitionConfig, MetaobjectFieldDefinitionConfig};
+
+    #[test]
+    fn extract_deps_supports_metaobject_definition_types_json_array() {
+        let def = MetaobjectDefinitionConfig {
+            type_name: "a".to_string(),
+            name: "A".to_string(),
+            field_definitions: vec![MetaobjectFieldDefinitionConfig {
+                key: "ref".to_string(),
+                name: "Ref".to_string(),
+                type_name: "list.mixed_reference".to_string(),
+                required: false,
+                description: None,
+                validations: Some(vec![MetaobjectValidationRule {
+                    name: "metaobject_definition_types".to_string(),
+                    value: Some("[\"x\",\"y\"]".to_string()),
+                }]),
+            }],
+            description: None,
+            display_name_key: None,
+            access: None,
+            capabilities: None,
+        };
+
+        let deps = extract_metaobject_deps(&def);
+        assert_eq!(deps, vec!["x".to_string(), "y".to_string()]);
     }
 }

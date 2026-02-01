@@ -25,6 +25,15 @@ use super::types::{
     MetaobjectCapabilitiesConfig, MetaobjectDefinitionConfig, MetaobjectValidationRule,
 };
 
+fn parse_json_string_array(input: &str) -> Option<Vec<String>> {
+    let v: Vec<String> = serde_json::from_str(input).ok()?;
+    Some(v)
+}
+
+fn to_json_string_array(items: &[String]) -> Option<String> {
+    serde_json::to_string(items).ok()
+}
+
 // -------------------------------
 // Planning DTO
 // -------------------------------
@@ -218,11 +227,13 @@ fn resolve_validations_for_shopify(
     validations: &Option<Vec<MetaobjectValidationRule>>,
     type_to_id: &HashMap<String, String>,
     logger: &dyn Logger,
-) -> Option<Vec<MetaobjectValidationRule>> {
+) -> Result<Option<Vec<MetaobjectValidationRule>>, AppError> {
     let v = normalize_validations(validations);
     if v.is_empty() {
-        return None;
+        return Ok(None);
     }
+
+    let id_set = type_to_id.values().cloned().collect::<std::collections::HashSet<_>>();
 
     let mut out: Vec<MetaobjectValidationRule> = vec![];
     for rule in v {
@@ -243,11 +254,79 @@ fn resolve_validations_for_shopify(
                     );
                     continue;
                 } else {
-                    logger.log(
-                        LogLevel::Warn,
-                        "Could not resolve metaobject_definition_type in Shopify",
-                        &[LogField::new("type", t.to_string())],
-                    );
+                    return Err(AppError::Json(format!(
+                        "cannot resolve metaobject_definition_type `{}` in Shopify (type not found)",
+                        t
+                    )));
+                }
+            }
+        }
+        if rule.name == "metaobject_definition_types" {
+            let raw = rule.value.as_deref().unwrap_or_default();
+            let types = parse_json_string_array(raw).ok_or_else(|| {
+                AppError::Json(format!(
+                    "invalid metaobject_definition_types value (expected JSON array string): `{}`",
+                    raw
+                ))
+            })?;
+
+            let mut ids: Vec<String> = vec![];
+            for t in &types {
+                let t = t.trim();
+                let id = type_to_id.get(t).ok_or_else(|| {
+                    AppError::Json(format!(
+                        "cannot resolve metaobject_definition_types item `{}` in Shopify (type not found)",
+                        t
+                    ))
+                })?;
+                ids.push(id.clone());
+            }
+
+            let json = to_json_string_array(&ids).ok_or_else(|| {
+                AppError::Json("failed to serialize metaobject_definition_ids array".to_string())
+            })?;
+
+            out.push(MetaobjectValidationRule {
+                name: "metaobject_definition_ids".to_string(),
+                value: Some(json),
+            });
+            logger.log(
+                LogLevel::Debug,
+                "Resolved metaobject_definition_types -> metaobject_definition_ids",
+                &[
+                    LogField::new("types", types.join(", ")),
+                    LogField::new("ids", ids.join(", ")),
+                ],
+            );
+            continue;
+        }
+        // If user config contains store-specific IDs, detect and fail early with a clear message.
+        if rule.name == "metaobject_definition_id" {
+            if let Some(id) = rule.value.as_deref() {
+                if !id_set.contains(id) {
+                    return Err(AppError::Json(format!(
+                        "metaobject_definition_id `{}` does not belong to the target Shopify store (export should use metaobject_definition_type instead)",
+                        id
+                    )));
+                }
+            }
+        }
+        if rule.name == "metaobject_definition_ids" {
+            if let Some(raw) = rule.value.as_deref() {
+                if let Some(ids) = parse_json_string_array(raw) {
+                    for id in ids {
+                        if !id_set.contains(&id) {
+                            return Err(AppError::Json(format!(
+                                "metaobject_definition_ids contains `{}` which does not belong to the target Shopify store (export should use metaobject_definition_types instead)",
+                                id
+                            )));
+                        }
+                    }
+                } else {
+                    return Err(AppError::Json(format!(
+                        "invalid metaobject_definition_ids value (expected JSON array string): `{}`",
+                        raw
+                    )));
                 }
             }
         }
@@ -255,9 +334,9 @@ fn resolve_validations_for_shopify(
     }
 
     if out.is_empty() {
-        None
+        Ok(None)
     } else {
-        Some(out)
+        Ok(Some(out))
     }
 }
 
@@ -265,28 +344,30 @@ fn build_create_input(
     cfg: &MetaobjectDefinitionConfig,
     type_to_id: &HashMap<String, String>,
     logger: &dyn Logger,
-) -> MetaobjectDefinitionCreateInput {
+) -> Result<MetaobjectDefinitionCreateInput, AppError> {
     let field_definitions = cfg
         .field_definitions
         .iter()
-        .map(|f| MetaobjectFieldDefinitionCreateInput {
-            key: f.key.clone(),
-            name: f.name.clone(),
-            description: normalize_description(f.description.clone()),
-            type_name: f.type_name.clone(),
-            required: f.required,
-            validations: resolve_validations_for_shopify(&f.validations, type_to_id, logger),
+        .map(|f| {
+            Ok(MetaobjectFieldDefinitionCreateInput {
+                key: f.key.clone(),
+                name: f.name.clone(),
+                description: normalize_description(f.description.clone()),
+                type_name: f.type_name.clone(),
+                required: f.required,
+                validations: resolve_validations_for_shopify(&f.validations, type_to_id, logger)?,
+            })
         })
-        .collect();
+        .collect::<Result<Vec<_>, AppError>>()?;
 
-    MetaobjectDefinitionCreateInput {
+    Ok(MetaobjectDefinitionCreateInput {
         type_name: cfg.type_name.clone(),
         name: cfg.name.clone(),
         description: normalize_description(cfg.description.clone()),
         display_name_key: normalize_display_name_key(cfg.display_name_key.clone()),
         capabilities: cfg.capabilities.clone(),
         field_definitions,
-    }
+    })
 }
 
 fn build_update_input(
@@ -294,7 +375,7 @@ fn build_update_input(
     existing: &ShopifyMetaobjectDefinition,
     type_to_id: &HashMap<String, String>,
     logger: &dyn Logger,
-) -> MetaobjectDefinitionUpdateInput {
+) -> Result<MetaobjectDefinitionUpdateInput, AppError> {
     let mut existing_fields_by_key: HashMap<String, &ShopifyMetaobjectFieldDefinition> =
         HashMap::new();
     for f in &existing.field_definitions {
@@ -310,11 +391,7 @@ fn build_update_input(
                     name: f.name.clone(),
                     description: normalize_description(f.description.clone()),
                     required: f.required,
-                    validations: resolve_validations_for_shopify(
-                        &f.validations,
-                        type_to_id,
-                        logger,
-                    ),
+                    validations: resolve_validations_for_shopify(&f.validations, type_to_id, logger)?,
                 },
             });
         } else {
@@ -325,23 +402,19 @@ fn build_update_input(
                     description: normalize_description(f.description.clone()),
                     type_name: f.type_name.clone(),
                     required: f.required,
-                    validations: resolve_validations_for_shopify(
-                        &f.validations,
-                        type_to_id,
-                        logger,
-                    ),
+                    validations: resolve_validations_for_shopify(&f.validations, type_to_id, logger)?,
                 },
             });
         }
     }
 
-    MetaobjectDefinitionUpdateInput {
+    Ok(MetaobjectDefinitionUpdateInput {
         name: cfg.name.clone(),
         description: normalize_description(cfg.description.clone()),
         display_name_key: normalize_display_name_key(cfg.display_name_key.clone()),
         capabilities: cfg.capabilities.clone(),
         field_definitions: ops,
-    }
+    })
 }
 
 fn normalize_existing_field_desc(d: &Option<String>) -> Option<String> {
@@ -411,7 +484,8 @@ fn has_changes(
         };
 
         let resolved_validations =
-            resolve_validations_for_shopify(&cfg_field.validations, type_to_id, logger);
+            resolve_validations_for_shopify(&cfg_field.validations, type_to_id, logger)
+                .unwrap_or(None);
 
         if ex_field.name != cfg_field.name
             || normalize_existing_field_desc(&ex_field.description)
@@ -565,7 +639,7 @@ where
                                         t
                                     ))
                                 })?;
-                                let input = build_update_input(cfg, ex, &type_to_id, logger);
+                                let input = build_update_input(cfg, ex, &type_to_id, logger)?;
                                 self.gateway
                                     .metaobject_definition_update(id, &input, logger)?;
                                 item.action = MetaobjectImportAction::Update;
@@ -576,7 +650,7 @@ where
                             }
                         }
                         None => {
-                            let input = build_create_input(cfg, &type_to_id, logger);
+                            let input = build_create_input(cfg, &type_to_id, logger)?;
                             self.gateway.metaobject_definition_create(&input, logger)?;
                             item.action = MetaobjectImportAction::Create;
                             Ok(())

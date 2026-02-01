@@ -153,6 +153,22 @@ cargo run -p mds_cli -- metaobject import
 
 ---
 
+## 📚 Documentation (rustdoc)
+
+- **Online (auto-updated on push to `main`)**: `https://oleksandrkever-code.github.io/meta-definition-sync-cli-rs/`
+  - Crates:
+    - `mds_cli`: `https://oleksandrkever-code.github.io/meta-definition-sync-cli-rs/mds_cli/`
+    - `mds_app`: `https://oleksandrkever-code.github.io/meta-definition-sync-cli-rs/mds_app/`
+    - `mds_domain`: `https://oleksandrkever-code.github.io/meta-definition-sync-cli-rs/mds_domain/`
+    - `mds_infra`: `https://oleksandrkever-code.github.io/meta-definition-sync-cli-rs/mds_infra/`
+- **Local**:
+
+```bash
+cargo doc --workspace --no-deps --open
+```
+
+---
+
 ## 🧾 I/O contracts (what files the CLI reads/writes)
 
 All paths are resolved relative to the **current working directory**.
