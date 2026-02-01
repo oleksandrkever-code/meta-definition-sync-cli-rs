@@ -2,3 +2,7 @@ pre-commit:
   commands:
     rustfmt:
       run: cargo fmt --all
+    clippy:
+      run: cargo clippy --workspace --all-targets -- -D warnings
+    test:
+      run: cargo test --workspace

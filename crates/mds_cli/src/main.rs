@@ -55,7 +55,7 @@ fn main() {
 
     init_logging(config.log_format);
 
-    let base_logger = TracingLogger::default();
+    let base_logger = TracingLogger;
     let env_ctx = [LogField::new("env", config.env_name.clone())];
     let env_logger = ContextLogger::new(&base_logger, &env_ctx);
 

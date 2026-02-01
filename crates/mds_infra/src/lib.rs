@@ -10,6 +10,7 @@ use std::{fs, path::Path};
 
 use mds_app::{AppError, FileRepo};
 
+#[derive(Default)]
 pub struct FsFileRepo;
 
 impl FsFileRepo {
@@ -64,7 +65,7 @@ mod tests {
             .as_nanos();
 
         let base = std::env::temp_dir().join(format!("mds_cli_test_{nanos}"));
-        let target = base.join("../../../definitions1/metafields/product.json");
+        let target = base.join("definitions/metafields/product.json");
 
         let mut repo = FsFileRepo::new();
         repo.write_text(

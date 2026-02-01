@@ -16,19 +16,10 @@ use super::types::{
     ShopifyMetafieldDefinition,
 };
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct ImportMetafieldsOptions {
     pub allow_type_changes: bool,
     pub allow_associated_metafields_deletion: bool,
-}
-
-impl Default for ImportMetafieldsOptions {
-    fn default() -> Self {
-        Self {
-            allow_type_changes: false,
-            allow_associated_metafields_deletion: false,
-        }
-    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -318,7 +309,7 @@ where
         // Batch behavior parity: 10 items per batch, 1000ms between batches.
         let batch_size = 10usize;
         let total = parsed.len();
-        let total_batches = (total + batch_size - 1) / batch_size;
+        let total_batches = total.div_ceil(batch_size);
         let mut processed = 0usize;
 
         for (batch_index, batch) in parsed.chunks(batch_size).enumerate() {
@@ -370,34 +361,34 @@ where
                             continue;
                         }
 
-                        if cfg.type_name == "reference" || cfg.type_name == "metaobject" {
-                            if !options.allow_associated_metafields_deletion {
-                                report.summary.failed += 1;
-                                report.items.push(MetafieldImportItemReport {
-                                    namespace: cfg.namespace.clone(),
-                                    key: cfg.key.clone(),
-                                    action: MetafieldImportAction::Failed,
-                                    message: Some(
-                                        "Type requires associated metafields deletion (pass --allow-associated-metafields-deletion)"
-                                            .to_string(),
+                        if (cfg.type_name == "reference" || cfg.type_name == "metaobject")
+                            && !options.allow_associated_metafields_deletion
+                        {
+                            report.summary.failed += 1;
+                            report.items.push(MetafieldImportItemReport {
+                                namespace: cfg.namespace.clone(),
+                                key: cfg.key.clone(),
+                                action: MetafieldImportAction::Failed,
+                                message: Some(
+                                    "Type requires associated metafields deletion (pass --allow-associated-metafields-deletion)"
+                                        .to_string(),
+                                ),
+                            });
+                            logger.log(
+                                LogLevel::Info,
+                                "Failed",
+                                &[
+                                    LogField::new(
+                                        "definition",
+                                        format!("{}.{}", cfg.namespace, cfg.key),
                                     ),
-                                });
-                                logger.log(
-                                    LogLevel::Info,
-                                    "Failed",
-                                    &[
-                                        LogField::new(
-                                            "definition",
-                                            format!("{}.{}", cfg.namespace, cfg.key),
-                                        ),
-                                        LogField::new(
-                                            "reason",
-                                            "requires_associated_metafields_deletion_flag",
-                                        ),
-                                    ],
-                                );
-                                continue;
-                            }
+                                    LogField::new(
+                                        "reason",
+                                        "requires_associated_metafields_deletion_flag",
+                                    ),
+                                ],
+                            );
+                            continue;
                         }
 
                         let id = ex.id.clone().ok_or_else(|| {

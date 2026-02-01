@@ -18,12 +18,14 @@ pub enum LogFormat {
     Json,
 }
 
-impl LogFormat {
-    pub fn from_str(s: &str) -> Self {
-        match s.trim().to_ascii_lowercase().as_str() {
+impl std::str::FromStr for LogFormat {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(match s.trim().to_ascii_lowercase().as_str() {
             "json" => LogFormat::Json,
             _ => LogFormat::Pretty,
-        }
+        })
     }
 }
 

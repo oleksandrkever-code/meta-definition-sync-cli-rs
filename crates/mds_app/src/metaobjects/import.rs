@@ -533,7 +533,7 @@ where
             );
 
             let total = level_defs.len();
-            let total_batches = (total + batch_size - 1) / batch_size;
+            let total_batches = total.div_ceil(batch_size);
 
             for (batch_index, batch) in level_defs.chunks(batch_size).enumerate() {
                 let batch_number = batch_index + 1;

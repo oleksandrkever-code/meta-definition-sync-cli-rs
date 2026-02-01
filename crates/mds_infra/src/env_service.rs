@@ -82,10 +82,10 @@ impl DotenvEnvironmentService {
     }
 
     fn parse_bool(map: &HashMap<String, String>, key: &str) -> bool {
-        match map.get(key).map(|s| s.trim().to_ascii_lowercase()) {
-            Some(v) if matches!(v.as_str(), "1" | "true" | "yes" | "on") => true,
-            _ => false,
-        }
+        matches!(
+            map.get(key).map(|s| s.trim().to_ascii_lowercase()),
+            Some(v) if matches!(v.as_str(), "1" | "true" | "yes" | "on")
+        )
     }
 
     fn parse_u64(map: &HashMap<String, String>, key: &str) -> Option<u64> {
@@ -129,7 +129,7 @@ impl EnvironmentService for DotenvEnvironmentService {
         let access_token = Self::required(&map, "MDS_CLI_SHOPIFY_ACCESS_TOKEN")?;
         let log_format = map
             .get("MDS_LOG_FORMAT")
-            .map(|s| LogFormat::from_str(s))
+            .and_then(|s| s.parse::<LogFormat>().ok())
             .unwrap_or(LogFormat::Pretty);
 
         Ok(StoreConfig {
@@ -154,11 +154,12 @@ mod tests {
         // We avoid creating real `.env*` files in tests because the parent repo `.gitignore`
         // ignores them, and the sandbox blocks writes to ignored paths.
         let svc = DotenvEnvironmentService::new(PathBuf::from("/project/root"));
-        let envs = svc.detect_from_filenames(&vec![
+        let names = [
             ".env".to_string(),
             ".env.my-dev".to_string(),
             "README.md".to_string(),
-        ]);
+        ];
+        let envs = svc.detect_from_filenames(&names);
         assert_eq!(envs.len(), 2);
         assert_eq!(envs[0].name, "default");
         assert_eq!(envs[1].name, "my-dev");
