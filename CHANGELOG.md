@@ -2,6 +2,8 @@
 
 This project follows **Keep a Changelog** and **Semantic Versioning**.
 
+<!-- markdownlint-disable MD024 -->
+
 ## [Unreleased]
 
 ### Added
@@ -10,12 +12,21 @@ This project follows **Keep a Changelog** and **Semantic Versioning**.
 
 ### Fixed
 
+## [0.1.5] - 2026-02-01
+
+### Fixed
+
+- Release automation: update `scripts/release.sh` to regenerate `Cargo.lock` after bumping the CLI
+  version and commit all relevant modified files so `--locked` builds don’t fail in GitHub Actions.
+
 ## [0.1.1] - 2026-02-01
 
 ### Added
+
 - Rustdoc publishing to GitHub Pages (CI workflow) and documentation links in README.
 
 ### Fixed
+
 - Metaobjects: make cross-environment metaobject reference validations portable by converting
   `metaobject_definition_ids` ⇄ `metaobject_definition_types` during export/import and failing fast
   when configs contain store-specific definition IDs.
@@ -23,6 +34,7 @@ This project follows **Keep a Changelog** and **Semantic Versioning**.
 ## [0.1.0] - 2026-02-01
 
 ### Added
+
 - `mdsr-cli` command-line tool for syncing Shopify **metafield definitions** and **metaobject definitions** via the Admin GraphQL API.
 - Metafield definitions:
   - Export to `definitions/metafields/<owner>.json` (filters out `shopify` namespaces)
@@ -42,8 +54,9 @@ This project follows **Keep a Changelog** and **Semantic Versioning**.
   - Best-effort startup update check (cached; configurable via env)
 
 ### Changed
+
 - Default import behavior is non-destructive (no deletions by default); destructive actions require explicit flags (planned).
 
 ### Fixed
-- Improved developer ergonomics with Lefthook `pre-commit` hooks (fmt/clippy/tests) and clippy-clean codebase.
 
+- Improved developer ergonomics with Lefthook `pre-commit` hooks (fmt/clippy/tests) and clippy-clean codebase.
